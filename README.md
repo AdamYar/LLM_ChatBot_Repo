@@ -18,6 +18,11 @@ python -m pip install -e .
 pytest -m deterministic
 pytest -m llm_judge
 pytest
+
+# Run one transcript file from the repository root:
+pytest -v tests/test_conversation_01_return.py
 ```
 
 The deterministic suite validates all eight records and flags transcript defects without network access. The DeepEval suite has one case per transcript and sends the caller input, agent output, and raw transcript context to the configured ChatGPT judge. It defaults to `gpt-4o` and reads `OPENAI_JUDGE_MODEL` from `.env` when provided.
+
+These are pytest-native tests that call DeepEval's `assert_test`; use `pytest` rather than `deepeval test run` for an individual transcript file.
