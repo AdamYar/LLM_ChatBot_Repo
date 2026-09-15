@@ -1,10 +1,9 @@
-"""Deterministic and LLM-judge tests for the eight recorded conversations."""
+"""Shared helpers and contracts for the per-transcript test modules."""
 
 import os
 import re
 from pathlib import Path
 
-import pytest
 from deepeval import assert_test
 from deepeval.metrics import GEval
 from deepeval.test_case import LLMTestCase, SingleTurnParams
@@ -13,7 +12,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TRANSCRIPTS_DIR = Path(__file__).parents[1] / "transcripts"
-TRANSCRIPT_FILES = [f"conversation-{number:02d}" for number in range(1, 9)]
 TRANSCRIPT_PATHS = {
     "conversation-01": "conversation-01-return.txt",
     "conversation-02": "conversation-02-order-tracking.txt",
@@ -70,8 +68,7 @@ SCENARIO_CONTRACTS = {
 
 
 def read_transcript(transcript_name: str) -> str:
-    path = TRANSCRIPTS_DIR / TRANSCRIPT_PATHS[transcript_name]
-    return path.read_text(encoding="utf-8")
+    return (TRANSCRIPTS_DIR / TRANSCRIPT_PATHS[transcript_name]).read_text(encoding="utf-8")
 
 
 def extract_turns(raw_transcript: str) -> list[tuple[str, str]]:
@@ -100,29 +97,18 @@ def extract_turns(raw_transcript: str) -> list[tuple[str, str]]:
     return turns
 
 
-@pytest.mark.deterministic
-@pytest.mark.parametrize("transcript_name", TRANSCRIPT_FILES)
-def test_transcript_fixture_and_turn_structure(transcript_name: str):
+def assert_deterministic(transcript_name: str):
     raw_transcript = read_transcript(transcript_name)
+    contract = SCENARIO_CONTRACTS[transcript_name]
     turns = extract_turns(raw_transcript)
-
     assert "TRANSCRIPT ID" in raw_transcript
     assert "SCENARIO" in raw_transcript
     assert len(turns) >= 4
     assert any(role == "caller" for role, _ in turns)
     assert any(role == "agent" for role, _ in turns)
 
-
-@pytest.mark.deterministic
-@pytest.mark.parametrize("transcript_name", TRANSCRIPT_FILES)
-def test_transcript_deterministic_behavior(transcript_name: str):
-    raw_transcript = read_transcript(transcript_name)
-    contract = SCENARIO_CONTRACTS[transcript_name]
     lower_raw = raw_transcript.lower()
-    agent_output = " ".join(
-        content for role, content in extract_turns(raw_transcript) if role == "agent"
-    ).lower()
-
+    agent_output = " ".join(content for role, content in turns if role == "agent").lower()
     for required_text in contract["required"]:
         assert required_text.lower() in lower_raw, f"Missing expected evidence: {required_text}"
     for forbidden_text in contract["forbidden_agent"]:
@@ -131,18 +117,13 @@ def test_transcript_deterministic_behavior(transcript_name: str):
         )
 
 
-@pytest.mark.llm_judge
-@pytest.mark.parametrize("transcript_name", TRANSCRIPT_FILES)
-@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY is required")
-def test_transcript_quality_with_chatgpt_judge(transcript_name: str):
+def run_llm_judge(transcript_name: str):
     raw_transcript = read_transcript(transcript_name)
     turns = extract_turns(raw_transcript)
-    caller_input = "\n".join(content for role, content in turns if role == "caller")
-    agent_output = "\n".join(content for role, content in turns if role == "agent")
     contract = SCENARIO_CONTRACTS[transcript_name]
     test_case = LLMTestCase(
-        input=caller_input,
-        actual_output=agent_output,
+        input="\n".join(content for role, content in turns if role == "caller"),
+        actual_output="\n".join(content for role, content in turns if role == "agent"),
         context=[raw_transcript],
         additional_metadata={"transcript": transcript_name},
     )

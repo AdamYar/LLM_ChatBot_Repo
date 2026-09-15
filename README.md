@@ -8,7 +8,7 @@ The eight supplied raw files live in `transcripts/` with their original names:
 
 `conversation-01-return.txt` through `conversation-08-order-status.txt`.
 
-The test module parses `AI AGENT >` and `CALLER >` timeline entries directly. Deterministic scenario contracts are maintained in the test module, including expected facts, consent requirements, privacy rules, and prohibited claims.
+Each test module parses its raw timeline through shared helpers and contains two tests: one deterministic contract test and one ChatGPT judge test. Deterministic scenario contracts include expected facts, consent requirements, privacy rules, and prohibited claims.
 
 ## Install and run
 
