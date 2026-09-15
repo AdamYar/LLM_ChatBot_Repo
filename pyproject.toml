@@ -1,0 +1,19 @@
+[project]
+name = "llm-chatbot-evals"
+version = "0.1.0"
+description = "Pytest and DeepEval automation for recorded chatbot transcripts"
+requires-python = ">=3.10"
+dependencies = [
+    "deepeval>=2.0.0",
+    "pytest>=8.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra"
+markers = [
+    "deterministic: local checks that do not call an LLM",
+    "llm_judge: DeepEval checks evaluated by ChatGPT",
+]
